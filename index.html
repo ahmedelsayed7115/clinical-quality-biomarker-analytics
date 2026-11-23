@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinical Quality &amp; Biomarker Control Suite | Ahmed Elsayed</title>
+<meta name="description" content="End-to-end Clinical Analytics Power BI (.pbip) suite evaluating 1,171 Synthea patients across hypertension control (37.42%), obesity prevalence (19.22%), polypharmacy burden (8.28%), and 90+ day post-therapy biomarker drift.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0B1220;
+    --bg-2: #0F1A2E;
+    --card: #131F36;
+    --border: #22324F;
+    --text: #E6ECF5;
+    --muted: #93A3BC;
+    --navy: #112D4E;
+    --blue: #3F72AF;
+    --ice: #DBE2EF;
+    --red: #EF4444;
+    --teal: #14B8A6;
+    --amber: #F59E0B;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(11, 18, 32, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .brand-badge {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--teal), var(--blue));
+    display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff;
+  }
+  .nav-links { display: flex; gap: 24px; font-size: 14px; color: var(--muted); }
+  .nav-links a:hover { color: var(--text); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 20px; border-radius: 10px; font-weight: 600; font-size: 14px;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    cursor: pointer;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: var(--blue); color: #fff; box-shadow: 0 8px 24px rgba(63,114,175,.35); }
+  .btn-primary:hover { background: #4F82BF; }
+  .btn-ghost { border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--blue); }
+
+  /* HERO */
+  .hero { padding: 96px 0 72px; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -200px -100px auto auto;
+    width: 640px; height: 640px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(20,184,166,.22), transparent 65%);
+    pointer-events: none;
+  }
+  .eyebrow {
+    display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ice);
+    background: rgba(63,114,175,.15); border: 1px solid rgba(63,114,175,.4);
+    padding: 6px 12px; border-radius: 999px; margin-bottom: 22px;
+  }
+  h1 { font-size: clamp(36px, 5.2vw, 60px); line-height: 1.08; font-weight: 800; letter-spacing: -.02em; max-width: 900px; }
+  h1 .accent { background: linear-gradient(90deg, #7FA7DB, var(--teal)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p.lead { font-size: 19px; color: var(--muted); max-width: 740px; margin: 22px 0 34px; }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 34px; }
+  .tag { font-size: 12.5px; color: var(--muted); border: 1px solid var(--border); padding: 5px 11px; border-radius: 8px; background: var(--bg-2); }
+
+  /* KPI STRIP */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 64px; }
+  .kpi {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; position: relative; overflow: hidden;
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .kpi:hover { transform: translateY(-4px); border-color: var(--blue); }
+  .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c, var(--blue)); }
+  .kpi .label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .kpi .value { font-size: 32px; font-weight: 800; margin: 6px 0 2px; color: var(--c, var(--text)); }
+  .kpi .sub { font-size: 12.5px; color: var(--muted); }
+
+  /* SECTIONS */
+  section { padding: 88px 0; }
+  section.alt { background: var(--bg-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .section-head { max-width: 780px; margin-bottom: 44px; }
+  .section-head .kicker { font-size: 13px; font-weight: 700; color: var(--teal); letter-spacing: .1em; text-transform: uppercase; }
+  h2 { font-size: clamp(28px, 3.4vw, 40px); font-weight: 800; letter-spacing: -.015em; margin: 8px 0 14px; line-height: 1.15; }
+  .section-head p { color: var(--muted); font-size: 17px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; }
+  .card h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .card .card-sub { font-size: 13.5px; color: var(--muted); margin-bottom: 18px; }
+  .chart-box { position: relative; height: 300px; }
+  .insight {
+    margin-top: 16px; font-size: 14px; color: var(--ice);
+    background: rgba(63,114,175,.1); border-left: 3px solid var(--blue);
+    padding: 10px 14px; border-radius: 0 8px 8px 0;
+  }
+  .insight.red { background: rgba(239,68,68,.08); border-color: var(--red); }
+  .insight.teal { background: rgba(20,184,166,.08); border-color: var(--teal); }
+  .insight.amber { background: rgba(245,158,11,.08); border-color: var(--amber); }
+
+  /* PROBLEM CARDS */
+  .q-card { position: relative; }
+  .q-num { font-size: 13px; font-weight: 800; color: var(--teal); margin-bottom: 10px; }
+  .q-card p { color: var(--muted); font-size: 14.5px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 11px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.highlight td { color: var(--amber); font-weight: 700; }
+
+  /* MATRIX GRID (12-CELL STRATIFICATION) */
+  .strat-matrix { display: grid; grid-template-columns: 110px repeat(3, 1fr); gap: 10px; }
+  .sm-label { display: flex; align-items: center; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .sm-head { text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; padding-bottom: 4px; }
+  .sm-cell { border-radius: 12px; padding: 13px 14px; border: 1px solid var(--border); transition: transform .2s; }
+  .sm-cell:hover { transform: scale(1.03); }
+  .sm-cell .n { font-size: 24px; font-weight: 800; line-height: 1.15; }
+  .sm-cell .t { font-size: 12px; font-weight: 700; margin-top: 2px; }
+  .sm-cell .e { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .sm-teal { background: rgba(20,184,166,.12); } .sm-teal .n { color: var(--teal); }
+  .sm-amber { background: rgba(245,158,11,.12); } .sm-amber .n { color: var(--amber); }
+  .sm-red { background: rgba(239,68,68,.14); } .sm-red .n { color: var(--red); }
+  .sm-slate { background: rgba(148,163,184,.08); } .sm-slate .n { color: var(--muted); }
+
+  /* ANATOMY PREVIEW CARD */
+  .anatomy-flex { display: grid; grid-template-columns: 230px 1fr; gap: 20px; align-items: center; }
+  .organ-list { display: grid; gap: 10px; }
+  .organ-pill {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+  .badge-dot { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12.5px; }
+  .badge-dot::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  /* PIPELINE */
+  .pipeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; position: relative; }
+  .step { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; position: relative; }
+  .step .s-num { width: 30px; height: 30px; border-radius: 8px; background: var(--navy); border: 1px solid var(--blue); display: grid; place-items: center; font-size: 13px; font-weight: 800; margin-bottom: 12px; }
+  .step h4 { font-size: 15px; margin-bottom: 6px; }
+  .step p { font-size: 13px; color: var(--muted); }
+  .step:not(:last-child)::after { content: "→"; position: absolute; right: -13px; top: 50%; transform: translateY(-50%); color: var(--blue); font-weight: 800; }
+
+  /* GALLERY */
+  .gallery { display: grid; gap: 22px; }
+  .shot { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); background: var(--card); }
+  .shot img { width: 100%; display: block; }
+  .shot .cap { padding: 14px 18px; font-size: 14px; color: var(--muted); }
+  .shot .cap b { color: var(--text); }
+
+  /* RECS */
+  .rec { display: grid; grid-template-columns: 56px 1fr auto; gap: 18px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--border); }
+  .rec:last-child { border-bottom: none; }
+  .rec .p { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; background: var(--navy); border: 1px solid var(--blue); }
+  .rec h4 { font-size: 16px; margin-bottom: 3px; }
+  .rec p { font-size: 14px; color: var(--muted); }
+  .rec .roi { text-align: right; font-weight: 800; color: var(--teal); white-space: nowrap; }
+  .rec .roi small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
+
+  /* STACK */
+  .stack { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .stack .card h3 { font-size: 15px; margin-bottom: 10px; }
+  .stack ul { list-style: none; font-size: 14px; color: var(--muted); }
+  .stack li { padding: 3px 0; }
+  .stack li::before { content: "▸ "; color: var(--teal); }
+
+  /* CTA */
+  .cta { text-align: center; }
+  .cta-box { background: linear-gradient(135deg, var(--navy), #153D4D); border: 1px solid var(--blue); border-radius: 24px; padding: 60px 30px; }
+  .cta-box p { color: var(--ice); max-width: 620px; margin: 0 auto 30px; }
+  .cta-box .hero-actions { justify-content: center; }
+
+  footer { padding: 34px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 13.5px; }
+  footer .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  /* REVEAL ANIMATION */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  @media (max-width: 960px) {
+    .kpis, .stack { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3, .anatomy-flex { grid-template-columns: 1fr; }
+    .pipeline { grid-template-columns: 1fr; }
+    .step:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -18px; transform: translateX(50%); }
+    .nav-links { display: none; }
+    .strat-matrix { grid-template-columns: 80px repeat(3, 1fr); }
+    .rec { grid-template-columns: 46px 1fr; }
+    .rec .roi { grid-column: 2; text-align: left; }
+  }
+  @media (max-width: 560px) {
+    .kpis, .stack { grid-template-columns: 1fr; }
+    .sm-cell .n { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="container">
+    <a href="#" class="brand"><span class="brand-badge">CQ</span> Clinical Biomarker Intelligence</a>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#control">Population Control</a>
+      <a href="#trajectories">Trajectories</a>
+      <a href="#drillthrough">Patient Map</a>
+      <a href="#dashboard">Power BI Suite</a>
+      <a href="#actions">Actions</a>
+    </div>
+    <a class="btn btn-primary" href="https://github.com/ahmedelsayed7115/clinical-quality-biomarker-analytics" target="_blank" rel="noopener">View on GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="container">
+    <span class="eyebrow">Clinical Quality Analytics · Longitudinal EHR · Power BI (.pbip)</span>
+    <h1>Turning <span class="accent">15,975 longitudinal EHR encounters</span> into clinical biomarker control.</h1>
+    <p class="lead">An end-to-end clinical intelligence project built over a 1,171-patient Massachusetts Synthea cohort—featuring a conformed Star Schema, deterministic <code>TOPN</code> tie-breaking DAX, dynamic Field Parameters, and a native Dynamic DAX SVG Human Anatomy Map.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#control">Explore the findings ↓</a>
+      <a class="btn btn-ghost" href="https://github.com/ahmedelsayed7115/clinical-quality-biomarker-analytics" target="_blank" rel="noopener">Open .pbip Repository</a>
+    </div>
+    <div class="tags">
+      <span class="tag">Power BI (.pbip)</span><span class="tag">TMDL</span><span class="tag">DAX</span>
+      <span class="tag">Power Query (M)</span><span class="tag">Star Schema</span><span class="tag">Field Parameters</span>
+      <span class="tag">Dynamic DAX SVG</span><span class="tag">MITRE Synthea™ EHR</span><span class="tag">Git</span>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi reveal" style="--c: var(--red)">
+        <div class="label">Hypertension Control Rate</div>
+        <div class="value" data-count="37.42" data-suffix="%" data-dec="2">0%</div>
+        <div class="sub">113 of 302 controlled (&lt;130/80 mmHg)</div>
+      </div>
+      <div class="kpi reveal" style="--c: var(--amber)">
+        <div class="label">Obesity Prevalence</div>
+        <div class="value" data-count="19.22" data-suffix="%" data-dec="2">0%</div>
+        <div class="sub">218 of 1,134 patients (BMI ≥ 30.0)</div>
+      </div>
+      <div class="kpi reveal" style="--c: var(--red)">
+        <div class="label">Polypharmacy Burden</div>
+        <div class="value" data-count="8.28" data-suffix="%" data-dec="2">0%</div>
+        <div class="sub">97 patients on 5+ active meds</div>
+      </div>
+      <div class="kpi reveal" style="--c: var(--teal)">
+        <div class="label">90+ Day Systolic BP Drift</div>
+        <div class="value" data-count="1.01" data-prefix="+" data-suffix=" mmHg" data-dec="2">+0 mmHg</div>
+        <div class="sub">n = 410 paired · 4.98 yr median gap</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- PROBLEM -->
+<section id="problem" class="alt">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">The Clinical Analytics Problem</span>
+      <h2>Three longitudinal questions raw EHR tables couldn't answer</h2>
+      <p>With 1,171 patients, 15,975 vital records (including 1,056 undated QALY rows), and 5,038 medication therapies, naive aggregations broke down across same-day visits and multi-year follow-ups.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card q-card reveal">
+        <div class="q-num">01 · LATEST CONTROL</div>
+        <h3>Who is actually controlled on their latest visit?</h3>
+        <p>Undated records and same-day encounter ties skewed cohort baselines. Deterministic <code>TOPN</code> tie-breaking isolates each patient's true latest dated systolic, diastolic, and BMI reading.</p>
+      </div>
+      <div class="card q-card reveal">
+        <div class="q-num">02 · LONGITUDINAL DRIFT</div>
+        <h3>Do biomarkers stabilize 90+ days post-therapy?</h3>
+        <p>Comparing pre-therapy averages against readings ≥90 days after initiation reveals near-flat BP drift (+1.01 mmHg over 4.98 yrs) versus gradual BMI (+1.36 kg/m²) and creatinine (+0.14 mg/dL) drift.</p>
+      </div>
+      <div class="card q-card reveal">
+        <div class="q-num">03 · PATIENT TRIAGE</div>
+        <h3>How do clinicians triage polypharmacy seniors fast?</h3>
+        <p>By pairing a Risk Stratification Matrix with a pure-DAX SVG Human Anatomy Map, care teams immediately spot multi-organ alerts (Heart, Lungs, Kidneys, Metabolic) alongside active refill history.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PILLAR 1: POPULATION CONTROL -->
+<section id="control">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Dashboard Page 1 · Population Control</span>
+      <h2>Only 37.42% of hypertensive patients meet the &lt;130/80 mmHg target</h2>
+      <p>Across 302 flagged hypertensive patients with complete blood pressure pairs, 189 (62.58%) remain uncontrolled—while polypharmacy burden concentrates sharply in older adults with 46.6% mortality.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Systolic BP by Age Cohort &amp; Polypharmacy Tier</h3>
+        <div class="card-sub">Mean dated readings (mmHg) vs. &lt;130 mmHg clinical target</div>
+        <div class="chart-box"><canvas id="bpCohortChart"></canvas></div>
+        <div class="insight amber"><b>Middle-Aged Polypharmacy Risk (127.5 mmHg)</b> and <b>Senior Polypharmacy (125.4 mmHg)</b> sit closest to the 130 mmHg threshold.</div>
+      </div>
+      <div class="card reveal">
+        <h3>Hypertension Control Breakdown (n = 302)</h3>
+        <div class="card-sub">Latest dated systolic &lt;130 and diastolic &lt;80 mmHg</div>
+        <div class="chart-box"><canvas id="htnSplitChart"></canvas></div>
+        <div class="insight red"><b>189 of 302 hypertensive patients (62.58%)</b> exceed systolic ≥130, diastolic ≥80, or both on their latest visit.</div>
+      </div>
+      <div class="card reveal">
+        <h3>HTN Control vs. Obesity Prevalence by Age Cohort</h3>
+        <div class="card-sub">Latest dated patient-level clinical rates (%)</div>
+        <div class="chart-box"><canvas id="obesityAgeChart"></canvas></div>
+        <div class="insight">Seniors show the lowest HTN control (<b>29.17%</b>), while Middle-Aged adults peak in obesity prevalence (<b>29.08%</b>).</div>
+      </div>
+      <div class="card reveal">
+        <h3>Cohort Mortality Rate by Age &amp; Medication Burden</h3>
+        <div class="card-sub">Share of cohort with recorded death date (14.60% overall)</div>
+        <div class="chart-box"><canvas id="mortalityTierChart"></canvas></div>
+        <div class="insight red">Mortality jumps to <b>46.67%</b> (Middle-Aged) and <b>46.58%</b> (Senior) in the 5+ medication Polypharmacy Risk tier.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PILLAR 2: TRAJECTORIES -->
+<section id="trajectories" class="alt">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Dashboard Page 2 · Biomarker Trajectories &amp; Follow-Up</span>
+      <h2>Visit 1–15 trends and 90+ day post-therapy drift</h2>
+      <p>Paired within-patient follow-up evaluates readings before first qualifying therapy against all readings from day 90 onward—observing multi-year trajectories without an untreated control arm.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Systolic BP Trajectory Across Visits 1–15</h3>
+        <div class="card-sub">Mean reading by sequential visit number &amp; polypharmacy tier</div>
+        <div class="chart-box"><canvas id="visitTrajChart"></canvas></div>
+        <table style="margin-top:14px;">
+          <thead><tr><th>90+ Day Paired Follow-Up</th><th class="num">Mean Shift</th><th class="num">Paired n</th><th class="num">Median Gap</th></tr></thead>
+          <tbody>
+            <tr><td>Systolic BP Change</td><td class="num" style="color:var(--teal);font-weight:700;">+1.01 mmHg</td><td class="num">410</td><td class="num">4.98 yrs</td></tr>
+            <tr class="highlight"><td>BMI Change</td><td class="num">+1.36 kg/m²</td><td class="num">327</td><td class="num">5.08 yrs</td></tr>
+            <tr><td>Creatinine Change</td><td class="num" style="color:var(--amber);font-weight:700;">+0.14 mg/dL</td><td class="num">47</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card reveal">
+        <h3>90+ Day Systolic BP Shift &amp; Coverage by Drug Class</h3>
+        <div class="card-sub">Post-therapy change (mmHg) across qualifying therapeutic classes</div>
+        <div class="chart-box" style="height: 360px"><canvas id="therapyShiftChart"></canvas></div>
+        <div class="insight teal"><b>Statins (-1.16 mmHg, n=69)</b> and <b>Respiratory Inhalers (-0.24 mmHg, n=20)</b> show slight mean reductions, while Antihypertensives (+6.67 mmHg, n=71) reflect higher baseline risk and multi-year progression.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PILLAR 3: PATIENT DRILL-THROUGH & RISK MATRIX -->
+<section id="drillthrough">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Dashboard Page 3 · Risk Matrix &amp; Patient Anatomy Map</span>
+      <h2>From population stratification down to organ-level triage</h2>
+      <p>Clinicians drill directly from any Age × Polypharmacy Risk tier into an individual patient's longitudinal BP timeline, 13+ medication history, and real-time DAX SVG system map.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Population Risk Stratification Matrix</h3>
+        <div class="card-sub">1,171 cohort patients · Age Cohort × Medication Burden Tier</div>
+        <div class="strat-matrix">
+          <div></div>
+          <div class="sm-head">No Active Meds</div>
+          <div class="sm-head">Standard Regimen</div>
+          <div class="sm-head">Polypharmacy (5+)</div>
+
+          <div class="sm-label">Senior<br>(65+)</div>
+          <div class="sm-cell sm-teal"><div class="n">45</div><div class="t">Low Burden</div><div class="e">4.4% mortality</div></div>
+          <div class="sm-cell sm-amber"><div class="n">170</div><div class="t">21.8% HTN Ctrl</div><div class="e">20.0% mortality</div></div>
+          <div class="sm-cell sm-red"><div class="n">73</div><div class="t">39.0% HTN Ctrl</div><div class="e">46.6% mortality</div></div>
+
+          <div class="sm-label">Middle-Aged<br>(45–64)</div>
+          <div class="sm-cell sm-teal"><div class="n">90</div><div class="t">34.4% Obesity</div><div class="e">3.3% mortality</div></div>
+          <div class="sm-cell sm-amber"><div class="n">232</div><div class="t">46.7% HTN Ctrl</div><div class="e">19.4% mortality</div></div>
+          <div class="sm-cell sm-red"><div class="n">15</div><div class="t">22.2% HTN Ctrl</div><div class="e">46.7% mortality</div></div>
+
+          <div class="sm-label">Young Adult<br>(18–44)</div>
+          <div class="sm-cell sm-teal"><div class="n">186</div><div class="t">11.8% Obesity</div><div class="e">3.8% mortality</div></div>
+          <div class="sm-cell sm-teal"><div class="n">201</div><div class="t">37.9% HTN Ctrl</div><div class="e">8.0% mortality</div></div>
+          <div class="sm-cell sm-red"><div class="n">9</div><div class="t">20.0% HTN Ctrl</div><div class="e">11.1% mortality</div></div>
+
+          <div class="sm-label">Pediatric<br>(&lt;18)</div>
+          <div class="sm-cell sm-teal"><div class="n">96</div><div class="t">0.0% Obesity</div><div class="e">5.2% mortality</div></div>
+          <div class="sm-cell sm-amber"><div class="n">54</div><div class="t">2.3% Obesity</div><div class="e">31.5% mortality</div></div>
+          <div class="sm-cell sm-slate"><div class="n">0</div><div class="t">No Cases</div><div class="e">0.0% of cohort</div></div>
+        </div>
+        <div class="insight red" style="margin-top:18px;"><b>88 of 97 Polypharmacy Risk patients (90.7%)</b> are Middle-Aged or Senior adults carrying ~47% cohort mortality.</div>
+      </div>
+
+      <div class="card reveal">
+        <h3>Native Dynamic DAX SVG Human Anatomy Map</h3>
+        <div class="card-sub">Drilled Case: Senior Polypharmacy Patient (<code>5cb510f1...fad1</code> · Age 74 · 13 Meds)</div>
+        <div class="anatomy-flex">
+          <div style="background:#0B1220;border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 190" width="200" height="160">
+              <g fill="#334155" stroke="#64748B">
+                <circle cx="120" cy="17" r="13"/>
+                <path d="M108 33Q86 31 82 48L68 95Q67 104 75 99L95 60L98 96L96 157Q98 167 105 159L120 109L135 159Q143 166 144 157L142 96L145 60L165 99Q173 104 172 95L158 48Q154 31 132 33Z"/>
+              </g>
+              <path d="M116 43Q104 43 100 63Q99 71 111 66Q117 61 116 43ZM124 43Q136 43 140 63Q141 71 129 66Q123 61 124 43Z" fill="#F59E0B"/>
+              <path d="M118 57Q119 51 125 55Q132 50 132 58Q130 64 124 68Q118 63 118 57Z" fill="#EF4444"/>
+              <path d="M110 73Q101 69 103 81Q106 88 111 82Q107 80 110 73ZM130 73Q139 69 137 81Q134 88 129 82Q133 80 130 73Z" fill="#14B8A6"/>
+              <path d="M101 89Q120 96 139 89L138 95Q120 102 102 95Z" fill="#EF4444"/>
+              <ellipse cx="125" cy="59" rx="12" ry="10" stroke="#EF4444" stroke-width="2" fill="none" opacity="0.55"/>
+              <ellipse cx="120" cy="94" rx="22" ry="10" stroke="#EF4444" stroke-width="2" fill="none" opacity="0.55"/>
+              <circle cx="15" cy="179" r="4" fill="#14B8A6"/><text x="23" y="183" font-family="Inter,Segoe UI" font-size="11" fill="#E6ECF5">Controlled</text>
+              <circle cx="101" cy="179" r="4" fill="#F59E0B"/><text x="109" y="183" font-family="Inter,Segoe UI" font-size="11" fill="#E6ECF5">Watch</text>
+              <circle cx="170" cy="179" r="4" fill="#EF4444"/><text x="178" y="183" font-family="Inter,Segoe UI" font-size="11" fill="#E6ECF5">Alert</text>
+            </svg>
+          </div>
+          <div class="organ-list">
+            <div class="organ-pill"><span>Cardiovascular (BP)</span><span class="badge-dot" style="color:var(--red)">136 / 84 mmHg · Alert</span></div>
+            <div class="organ-pill"><span>Metabolic (BMI)</span><span class="badge-dot" style="color:var(--red)">30.1 kg/m² · Alert</span></div>
+            <div class="organ-pill"><span>Respiratory (Inhaler)</span><span class="badge-dot" style="color:var(--amber)">Active Salmeterol · Watch</span></div>
+            <div class="organ-pill"><span>Renal (Creatinine)</span><span class="badge-dot" style="color:var(--teal)">0.90 mg/dL · Controlled</span></div>
+          </div>
+        </div>
+        <div class="insight teal" style="margin-top:18px;">Built with <code>dataCategory: ImageUrl</code> inside a standard Power BI table—<b>zero custom visual marketplace dependencies</b>.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD SCREENSHOTS -->
+<section id="dashboard" class="alt">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">The Deliverable</span>
+      <h2>A 3-page Power BI (.pbip) clinical analytics suite</h2>
+      <p>1600×900 executive canvas with custom ClinicalExecutiveTheme, dynamic Field Parameters, cross-page Drill-Through, and conformed Star Schema.</p>
+    </div>
+    <div class="gallery">
+      <div class="shot reveal"><img src="assets/01_population_control.png" alt="Page 1: 01 Population Control"><div class="cap"><b>Page 1 · 01 Population Control</b> — Cohort KPIs (1,171 patients, 37.42% HTN control, 19.22% obesity, 8.28% polypharmacy, 14.60% mortality) and expanded Risk Stratification Matrix</div></div>
+      <div class="shot reveal"><img src="assets/02_biomarker_trajectories.png" alt="Page 2: 02 Biomarker Trajectories"><div class="cap"><b>Page 2 · 02 Biomarker Trajectories</b> — Visit 1–15 curves by polypharmacy burden, 90+ day post-therapy shifts (+1.01 mmHg, +1.36 kg/m², +0.14 mg/dL), and class coverage</div></div>
+      <div class="shot reveal"><img src="assets/03_patient_drillthrough.png" alt="Page 3: 03 Patient Drill-Through"><div class="cap"><b>Page 3 · 03 Patient Drill-Through</b> — Drilled Senior Polypharmacy chart featuring Dynamic DAX SVG organ hotspots, comorbidity chips, BP timeline, and medication history</div></div>
+      <div class="shot reveal"><img src="assets/star_schema_model_view.png" alt="Semantic Model: Conformed Star Schema"><div class="cap"><b>Semantic Model View</b> — Conformed Star Schema (<code>Dim_Patients</code> &amp; <code>Dim_Date</code> filtering <code>Fact_Vitals</code> &amp; <code>Fact_Medications</code>), <code>_Measures</code>, and <code>Biomarker Selector</code></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- METHOD -->
+<section id="method">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">How It Was Built</span>
+      <h2>From raw Synthea EHR tables to a portable .pbip suite</h2>
+    </div>
+    <div class="pipeline reveal">
+      <div class="step"><div class="s-num">1</div><h4>Ingest</h4><p>4 Synthea CSV tables embedded &amp; toggleable via <code>CSVFolder</code> parameter.</p></div>
+      <div class="step"><div class="s-num">2</div><h4>Model</h4><p>4-table Star Schema with 4 active single-direction 1→* relationships.</p></div>
+      <div class="step"><div class="s-num">3</div><h4>Engineer DAX</h4><p><code>TOPN</code> tie-breaking latest vitals &amp; paired 90+ day pre/post deltas.</p></div>
+      <div class="step"><div class="s-num">4</div><h4>Parameterize</h4><p><code>Biomarker Selector</code> switches axes, targets, &amp; subtitles across 5 vitals.</p></div>
+      <div class="step"><div class="s-num">5</div><h4>Visualize SVG</h4><p>Inline DAX SVG anatomy map &amp; 3-page PBIR report definitions.</p></div>
+    </div>
+
+    <div class="stack" style="margin-top: 40px">
+      <div class="card reveal"><h3>Star Schema &amp; TMDL</h3><ul><li>Dim_Patients (1,171)</li><li>Dim_Date (39,364)</li><li>Fact_Vitals (15,975)</li><li>Fact_Medications (5,038)</li></ul></div>
+      <div class="card reveal"><h3>Advanced DAX</h3><ul><li>TOPN tie-breaking</li><li>REMOVEFILTERS paired eval</li><li>Field Parameter switches</li><li>Dynamic ImageUrl SVG</li></ul></div>
+      <div class="card reveal"><h3>Portability</h3><ul><li>PBIP + PBIR source format</li><li>Compressed inline CSVs</li><li>CSVFolder M parameter</li><li>Zero custom visuals</li></ul></div>
+      <div class="card reveal"><h3>Validation</h3><ul><li>Byte-for-byte CSV check</li><li>Offline TMDL syntax check</li><li>DAX Query View script</li><li>1,056 undated rows kept</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ACTIONS -->
+<section id="actions" class="alt">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="kicker">Clinical Quality Recommendations</span>
+      <h2>Five targeted interventions tied to cohort numbers</h2>
+    </div>
+    <div class="card reveal">
+      <div class="rec"><div class="p">1</div><div><h4>Hypertension Titration Outreach for Uncontrolled Cohort</h4><p>Prioritize the 189 hypertensive patients above 130/80 mmHg—starting with Seniors (29.17% control) and Polypharmacy Risk tiers.</p></div><div class="roi">189 Patients<small>62.58% uncontrolled</small></div></div>
+      <div class="rec"><div class="p">2</div><div><h4>Geriatric Polypharmacy Medication Reconciliation</h4><p>Target the 88 Middle-Aged and Senior patients on 5+ active drugs via pharmacist deprescribing and adherence reviews.</p></div><div class="roi">46.6% Mort.<small>88 adult polypharmacy pts</small></div></div>
+      <div class="rec"><div class="p">3</div><div><h4>Longitudinal Cardiometabolic Weight Management</h4><p>Pair pharmacotherapy initiation with structured lifestyle coaching to counter the +1.36 kg/m² 5-year BMI drift and 29.08% Middle-Aged obesity.</p></div><div class="roi">+1.36 kg/m²<small>327 paired follow-ups</small></div></div>
+      <div class="rec"><div class="p">4</div><div><h4>Proactive Renal Function Monitoring Post-Therapy</h4><p>Schedule routine eGFR and serum creatinine labs for patients initiating chronic therapies showing +0.14 mg/dL drift.</p></div><div class="roi">+0.14 mg/dL<small>47 renal watch pairs</small></div></div>
+      <div class="rec"><div class="p">5</div><div><h4>EHR Visit-Date Capture Governance for QALY Scoring</h4><p>Enforce encounter date stamps on quality-of-life surveys so all 1,056 undated vitals/QALY records integrate into dated time-series trends.</p></div><div class="roi">1,056 Rows<small>Missing visit_date fixed</small></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container">
+    <div class="cta-box reveal">
+      <h2>Explore the Power BI (.pbip) Suite</h2>
+      <p>Clone the repository, open <code>Healthcare_Clinical_Model.pbip</code> in Power BI Desktop, and click Refresh—embedded CSVs work immediately out of the box.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="https://github.com/ahmedelsayed7115/clinical-quality-biomarker-analytics" target="_blank" rel="noopener">View Repository</a>
+        <a class="btn btn-ghost" href="https://github.com/ahmedelsayed7115/clinical-quality-biomarker-analytics/blob/main/Healthcare_Clinical_Model.SemanticModel/definition/tables/_Measures.tmdl" target="_blank" rel="noopener">Inspect DAX Measures</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <span>© 2026 Ahmed Elsayed · Clinical Quality &amp; Biomarker Control Intelligence</span>
+    <span>Data: 100% synthetic MITRE Synthea™ Massachusetts EHR Cohort (n = 1,171 patients)</span>
+  </div>
+</footer>
+
+<script>
+  // ---------- Reveal on scroll ----------
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // ---------- Animated KPI counters ----------
+  function animateCount(el) {
+    const target = parseFloat(el.dataset.count);
+    const dec = parseInt(el.dataset.dec || 0);
+    const pre = el.dataset.prefix || '';
+    const suf = el.dataset.suffix || '';
+    const dur = 1400;
+    const start = performance.now();
+    function tick(now) {
+      const p = Math.min((now - start) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = pre + (target * eased).toFixed(dec) + suf;
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  const kpiObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { animateCount(e.target); kpiObserver.unobserve(e.target); }
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('[data-count]').forEach(el => kpiObserver.observe(el));
+
+  // ---------- Charts ----------
+  Chart.defaults.color = '#93A3BC';
+  Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+  Chart.defaults.borderColor = 'rgba(147,163,188,0.12)';
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+  const C = { blue: '#3F72AF', red: '#EF4444', teal: '#14B8A6', amber: '#F59E0B', slate: '#94A3B8' };
+
+  const chartFactories = {
+    bpCohortChart: (ctx) => new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Pediatric', 'Young Adult', 'Middle-Aged', 'Senior'],
+        datasets: [
+          { label: 'No Active Meds', data: [119.49, 119.73, 119.50, 118.62], backgroundColor: C.slate, borderRadius: 6 },
+          { label: 'Standard Regimen', data: [119.33, 125.52, 122.48, 122.67], backgroundColor: C.blue, borderRadius: 6 },
+          { label: 'Polypharmacy Risk', data: [null, 121.85, 127.50, 125.41], backgroundColor: C.red, borderRadius: 6 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + (c.raw ? c.raw.toFixed(1) + ' mmHg' : 'N/A') } } },
+        scales: { y: { min: 110, max: 132, ticks: { callback: v => v + ' mmHg' } }, x: { grid: { display: false } } }
+      }
+    }),
+    htnSplitChart: (ctx) => new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Controlled (<130/80 mmHg)', 'Uncontrolled (≥130 or ≥80)'],
+        datasets: [{ data: [113, 189], backgroundColor: [C.teal, C.red], borderWidth: 0, hoverOffset: 10 }]
+      },
+      options: {
+        maintainAspectRatio: false, cutout: '64%',
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: c => c.label + ': ' + c.raw + ' pts (' + (c.raw / 302 * 100).toFixed(2) + '%)' } }
+        }
+      }
+    }),
+    obesityAgeChart: (ctx) => new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Pediatric', 'Young Adult', 'Middle-Aged', 'Senior'],
+        datasets: [
+          { label: 'HTN Control Rate (%)', data: [0, 36.96, 44.74, 29.17], backgroundColor: C.teal, borderRadius: 6 },
+          { label: 'Obesity Prevalence (%)', data: [0.88, 13.89, 29.08, 22.22], backgroundColor: C.amber, borderRadius: 6 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.raw + '%' } } },
+        scales: { y: { beginAtZero: true, max: 55, ticks: { callback: v => v + '%' } }, x: { grid: { display: false } } }
+      }
+    }),
+    mortalityTierChart: (ctx) => new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Pediatric', 'Young Adult', 'Middle-Aged', 'Senior'],
+        datasets: [
+          { label: 'No Active Meds', data: [5.21, 3.76, 3.33, 4.44], backgroundColor: C.slate, borderRadius: 6 },
+          { label: 'Standard Regimen', data: [31.48, 7.96, 19.40, 20.00], backgroundColor: C.blue, borderRadius: 6 },
+          { label: 'Polypharmacy Risk', data: [0, 11.11, 46.67, 46.58], backgroundColor: C.red, borderRadius: 6 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.raw + '%' } } },
+        scales: { y: { beginAtZero: true, max: 55, ticks: { callback: v => v + '%' } }, x: { grid: { display: false } } }
+      }
+    }),
+    visitTrajChart: (ctx) => new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['V1','V2','V3','V4','V5','V6','V7','V8','V9','V10','V11','V12','V13','V14','V15'],
+        datasets: [
+          { label: 'Polypharmacy Risk', data: [121.72,125.51,123.49,125.23,124.13,122.40,125.49,123.63,125.20,124.36,124.71,125.38,124.11,124.77,123.35], borderColor: C.red, tension: 0.3, pointRadius: 4, borderWidth: 2.5 },
+          { label: 'Standard Regimen', data: [122.75,122.78,122.60,123.14,123.22,123.65,123.35,123.05,124.16,123.18,124.28,124.27,124.97,123.82,125.39], borderColor: C.blue, tension: 0.3, pointRadius: 4, borderWidth: 2.5 },
+          { label: 'No Active Meds', data: [119.48,119.60,119.77,118.94,118.96,119.62,120.02,119.90,118.33,118.63,120.53,119.67,119.54,120.54,120.97], borderColor: C.slate, tension: 0.3, pointRadius: 4, borderWidth: 2.5 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.raw.toFixed(2) + ' mmHg' } } },
+        scales: { y: { min: 115, max: 130, ticks: { callback: v => v + ' mmHg' } }, x: { grid: { display: false } } }
+      }
+    }),
+    therapyShiftChart: (ctx) => new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Antihypertensives (347 pts)', 'Antidiabetics (62 pts)', 'Other Therapies (1,081 pts)', 'Cardiac & Anticoagulants (88 pts)', 'Respiratory Inhalers (84 pts)', 'Lipid-Lowering Statins (167 pts)'],
+        datasets: [{
+          data: [6.67, 5.25, 0.48, 0.05, -0.24, -1.16],
+          backgroundColor: (c) => c.raw < 0 ? C.teal : (c.raw <= 1.5 ? C.amber : C.red),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y', maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => (c.raw >= 0 ? '+' : '') + c.raw.toFixed(2) + ' mmHg shift' } } },
+        scales: { x: { min: -2, max: 8, ticks: { callback: v => (v > 0 ? '+' : '') + v } }, y: { grid: { display: false } } }
+      }
+    })
+  };
+
+  const chartObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        chartFactories[e.target.id](e.target);
+        chartObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.25 });
+  Object.keys(chartFactories).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) chartObserver.observe(el);
+  });
+</script>
+</body>
+</html>

@@ -1,5 +1,11 @@
 # Clinical Outcomes & Biomarker Control Power BI Suite
 
+[![Power BI](https://img.shields.io/badge/Power_BI-PBIP_TMDL-F2C811?logo=powerbi&logoColor=black)](Healthcare_Clinical_Model.pbip)
+[![Live Landing Page](https://img.shields.io/badge/GitHub_Pages-Live_Showcase-14B8A6?logo=github&logoColor=white)](https://ahmedelsayed7115.github.io/clinical-quality-biomarker-analytics/)
+[![Synthea EHR](https://img.shields.io/badge/Data-MITRE_Synthea™-3F72AF)](source/)
+[![Status](https://img.shields.io/badge/Status-Executive_Ready-success)]()
+
+> **Live Interactive Landing Page:** [View on GitHub Pages](https://ahmedelsayed7115.github.io/clinical-quality-biomarker-analytics/)  
 > **Project File:** [`Healthcare_Clinical_Model.pbip`](Healthcare_Clinical_Model.pbip) *(Power BI Desktop `.pbip` project with TMDL semantic model & PBIR report definitions)*  
 > **Scope:** Synthea Longitudinal EHR Cohort (`n = 1,171` unique Massachusetts patients; `15,975` vital/encounter rows; `5,038` medication prescriptions; `100%` synthetic HIPAA-safe data)  
 > **Architecture:** Conformed 4-Table Star Schema • `TOPN` Tie-Breaking DAX • Dynamic Field Parameters • Native DAX SVG Human Anatomy Map (zero custom visual dependencies)
