@@ -1,0 +1,23 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation PBI_QueryOrder = ["CSVFolder","Dim_Patients","Dim_Date","Fact_Vitals","Fact_Medications","_Measures"]
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table Dim_Patients
+ref table Dim_Date
+ref table Fact_Vitals
+ref table Fact_Medications
+ref table _Measures
+ref table 'Biomarker Selector'
+
+ref cultureInfo en-US
+

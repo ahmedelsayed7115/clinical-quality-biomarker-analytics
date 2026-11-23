@@ -1,0 +1,51 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "b54ba2a85c7f5a9d9fa0",
+  "position": {
+    "x": 36,
+    "y": 534,
+    "z": 11,
+    "height": 48,
+    "width": 740,
+    "tabOrder": 11
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Long-Term Post-Therapy Biomarker Shift (Pre-Start vs. 90+ Days After)",
+                    "textStyle": {
+                      "fontFamily": "Segoe UI",
+                      "fontSize": "10.5pt",
+                      "color": "#0F172A",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Multi-year biomarker change by therapeutic class",
+                    "textStyle": {
+                      "fontFamily": "Segoe UI",
+                      "fontSize": "8.25pt",
+                      "color": "#64748B",
+                      "fontWeight": "normal"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

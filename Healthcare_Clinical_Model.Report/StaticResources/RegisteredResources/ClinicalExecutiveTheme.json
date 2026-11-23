@@ -1,0 +1,32 @@
+{
+  "name": "ClinicalExecutiveTheme",
+  "dataColors": [
+    "#94A3B8",
+    "#2563EB",
+    "#E11D48",
+    "#0D9488",
+    "#D97706",
+    "#475569"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#0F172A",
+  "tableAccent": "#0D9488",
+  "textClasses": {
+    "title": {
+      "fontFace": "Segoe UI Semibold",
+      "color": "#0F172A"
+    },
+    "label": {
+      "fontFace": "Segoe UI",
+      "color": "#64748B"
+    },
+    "callout": {
+      "fontFace": "Segoe UI Bold",
+      "color": "#0F172A"
+    },
+    "header": {
+      "fontFace": "Segoe UI Semibold",
+      "color": "#475569"
+    }
+  }
+}

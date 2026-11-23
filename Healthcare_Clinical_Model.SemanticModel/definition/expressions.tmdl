@@ -1,0 +1,5 @@
+expression CSVFolder = "Use included CSVs" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: ccc71540-5b20-5e2f-892e-a428ddea9eac
+
+	annotation PBI_ResultType = Text
+

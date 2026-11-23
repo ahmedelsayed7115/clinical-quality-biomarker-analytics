@@ -1,0 +1,723 @@
+table _Measures
+	lineageTag: c2769718-9cc6-547d-b0b6-f1e10ee81a1a
+
+	/// Distinct patients in the selected demographic cohort.
+	measure 'Total Cohort Patients' = DISTINCTCOUNT(Dim_Patients[patient_id])
+		formatString: #,##0
+		displayFolder: Cohort
+		lineageTag: 5e922662-a6b7-5d8d-9019-18e751906369
+
+	/// Share of the selected cohort with a recorded death date. This is a cohort snapshot.
+	measure 'Cohort Mortality Rate (%)' =
+			VAR CohortSize = [Total Cohort Patients]
+			VAR PatientsWithDeathDate =
+			    CALCULATE(
+			        [Total Cohort Patients],
+			        KEEPFILTERS(NOT ISBLANK(Dim_Patients[DEATHDATE]))
+			    )
+			RETURN DIVIDE(COALESCE(PatientsWithDeathDate, 0), CohortSize)
+		formatString: 0.00%
+		displayFolder: Cohort
+		lineageTag: 02efffce-f388-57cf-9711-046eff279bcb
+
+	/// Share of the selected cohort in the source Polypharmacy Risk tier (5+ active medications).
+	measure 'Polypharmacy Rate (%)' =
+			VAR CohortSize = [Total Cohort Patients]
+			VAR PatientsWithFiveOrMore =
+			    CALCULATE(
+			        [Total Cohort Patients],
+			        KEEPFILTERS(Dim_Patients[polypharmacy_tier] = "Polypharmacy Risk")
+			    )
+			RETURN DIVIDE(COALESCE(PatientsWithFiveOrMore, 0), CohortSize)
+		formatString: 0.00%
+		displayFolder: Cohort
+		lineageTag: aff35385-6866-531d-8265-514fb64498ae
+
+	/// Most recent dated nonblank reading in the current context. Apply to one patient at a time.
+	measure 'Latest Patient Systolic BP' =
+			VAR LatestVisit =
+			    TOPN(
+			        1,
+			        FILTER(
+			            Fact_Vitals,
+			            NOT ISBLANK(Fact_Vitals[visit_date])
+			                && NOT ISBLANK(Fact_Vitals[systolic_bp])
+			        ),
+			        Fact_Vitals[visit_date], DESC,
+			        Fact_Vitals[visit_sequence_num], DESC,
+			        Fact_Vitals[encounter_id], DESC
+			    )
+			RETURN MAXX(LatestVisit, Fact_Vitals[systolic_bp])
+		isHidden
+		displayFolder: Latest Readings
+		lineageTag: 53a954fb-2621-5e5e-a692-a085a54ba0c3
+
+	/// Most recent dated nonblank reading in the current context. Apply to one patient at a time.
+	measure 'Latest Patient Diastolic BP' =
+			VAR LatestVisit =
+			    TOPN(
+			        1,
+			        FILTER(
+			            Fact_Vitals,
+			            NOT ISBLANK(Fact_Vitals[visit_date])
+			                && NOT ISBLANK(Fact_Vitals[diastolic_bp])
+			        ),
+			        Fact_Vitals[visit_date], DESC,
+			        Fact_Vitals[visit_sequence_num], DESC,
+			        Fact_Vitals[encounter_id], DESC
+			    )
+			RETURN MAXX(LatestVisit, Fact_Vitals[diastolic_bp])
+		isHidden
+		displayFolder: Latest Readings
+		lineageTag: 0dcec123-12c0-5c09-a6ee-cd2fe0246b06
+
+	/// Most recent dated nonblank reading in the current context. Apply to one patient at a time.
+	measure 'Latest Patient BMI' =
+			VAR LatestVisit =
+			    TOPN(
+			        1,
+			        FILTER(
+			            Fact_Vitals,
+			            NOT ISBLANK(Fact_Vitals[visit_date])
+			                && NOT ISBLANK(Fact_Vitals[bmi])
+			        ),
+			        Fact_Vitals[visit_date], DESC,
+			        Fact_Vitals[visit_sequence_num], DESC,
+			        Fact_Vitals[encounter_id], DESC
+			    )
+			RETURN MAXX(LatestVisit, Fact_Vitals[bmi])
+		isHidden
+		displayFolder: Latest Readings
+		lineageTag: a76a7444-c81f-5ebd-b879-4d34168b7ff1
+
+	/// Most recent dated nonblank reading in the current context. Apply to one patient at a time.
+	measure 'Latest Patient QALY' =
+			VAR LatestVisit =
+			    TOPN(
+			        1,
+			        FILTER(
+			            Fact_Vitals,
+			            NOT ISBLANK(Fact_Vitals[visit_date])
+			                && NOT ISBLANK(Fact_Vitals[qaly])
+			        ),
+			        Fact_Vitals[visit_date], DESC,
+			        Fact_Vitals[visit_sequence_num], DESC,
+			        Fact_Vitals[encounter_id], DESC
+			    )
+			RETURN MAXX(LatestVisit, Fact_Vitals[qaly])
+		isHidden
+		displayFolder: Latest Readings
+		lineageTag: 6d2d7b92-14b0-5c5f-868c-ec29d8e5a9bf
+
+	/// Share of flagged patients with both readings whose latest systolic and diastolic readings are below 130 and 80, respectively.
+	measure 'Hypertension Control Rate (%)' =
+			VAR HypertensivePatients =
+			    CALCULATETABLE(
+			        DISTINCT(Dim_Patients[patient_id]),
+			        KEEPFILTERS(Dim_Patients[has_hypertension] = 1)
+			    )
+			VAR LatestBP =
+			    ADDCOLUMNS(
+			        HypertensivePatients,
+			        "@Systolic", [Latest Patient Systolic BP],
+			        "@Diastolic", [Latest Patient Diastolic BP]
+			    )
+			VAR PatientsWithBothReadings =
+			    FILTER(LatestBP, NOT ISBLANK([@Systolic]) && NOT ISBLANK([@Diastolic]))
+			VAR Controlled =
+			    FILTER(PatientsWithBothReadings, [@Systolic] < 130 && [@Diastolic] < 80)
+			RETURN DIVIDE(COALESCE(COUNTROWS(Controlled), 0), COUNTROWS(PatientsWithBothReadings))
+		formatString: 0.00%
+		displayFolder: Clinical Control
+		lineageTag: 88454712-f035-5b46-aa85-29cd4ae1a845
+
+	/// Share of patients with a dated BMI reading whose latest BMI is at least 30.
+	measure 'Obesity Prevalence (%)' =
+			VAR LatestBMI =
+			    ADDCOLUMNS(DISTINCT(Dim_Patients[patient_id]), "@BMI", [Latest Patient BMI])
+			VAR PatientsWithBMI = FILTER(LatestBMI, NOT ISBLANK([@BMI]))
+			VAR PatientsWithObesity = FILTER(PatientsWithBMI, [@BMI] >= 30)
+			RETURN DIVIDE(COALESCE(COUNTROWS(PatientsWithObesity), 0), COUNTROWS(PatientsWithBMI))
+		formatString: 0.00%
+		displayFolder: Clinical Control
+		lineageTag: bb2c577d-d419-514c-bad5-e5a0d5ab815d
+
+	/// Mean of each patient’s latest dated QALY, with equal weight per patient and blank scores skipped.
+	measure 'Average Quality of Life (QALY)' = AVERAGEX(DISTINCT(Dim_Patients[patient_id]), [Latest Patient QALY])
+		formatString: #,##0.00
+		displayFolder: Clinical Control
+		lineageTag: 3f589c49-db01-5ab3-8019-c375873ce9b0
+
+	/// Mean of dated nonblank readings in the current filter context. Each reading has equal weight.
+	measure 'Average Systolic BP Reading' =
+			CALCULATE(
+			    AVERAGE(Fact_Vitals[systolic_bp]),
+			    KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date]))
+			)
+		formatString: #,##0.00
+		displayFolder: Biomarker Averages
+		lineageTag: a12ed93f-70d9-52ac-b853-e5f4b64f11db
+
+	/// Mean of dated nonblank readings in the current filter context. Each reading has equal weight.
+	measure 'Average Diastolic BP Reading' =
+			CALCULATE(
+			    AVERAGE(Fact_Vitals[diastolic_bp]),
+			    KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date]))
+			)
+		formatString: #,##0.00
+		displayFolder: Biomarker Averages
+		lineageTag: 5e57096b-d9f5-54f2-802b-b9f875dcc7c4
+
+	/// Mean of dated nonblank readings in the current filter context. Each reading has equal weight.
+	measure 'Average BMI Reading' =
+			CALCULATE(
+			    AVERAGE(Fact_Vitals[bmi]),
+			    KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date]))
+			)
+		formatString: #,##0.00
+		displayFolder: Biomarker Averages
+		lineageTag: 7bad0aad-6a02-50d3-8bfb-792f124bfd89
+
+	/// Mean of dated nonblank readings in the current filter context. Each reading has equal weight.
+	measure 'Average Heart Rate Reading' =
+			CALCULATE(
+			    AVERAGE(Fact_Vitals[heart_rate]),
+			    KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date]))
+			)
+		formatString: #,##0.00
+		displayFolder: Biomarker Averages
+		lineageTag: ea474d7b-ee1a-5cad-84c3-46d25a9522bf
+
+	/// Mean of dated nonblank readings in the current filter context. Each reading has equal weight.
+	measure 'Average Creatinine Reading' =
+			CALCULATE(
+			    AVERAGE(Fact_Vitals[creatinine]),
+			    KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date]))
+			)
+		formatString: #,##0.00
+		displayFolder: Biomarker Averages
+		lineageTag: bf8115eb-d914-5d41-8b55-7ca64afc0da7
+
+	/// Mean of dated nonblank readings in the current filter context. Each reading has equal weight.
+	measure 'Average QALY Reading' =
+			CALCULATE(
+			    AVERAGE(Fact_Vitals[qaly]),
+			    KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date]))
+			)
+		formatString: #,##0.00
+		displayFolder: Biomarker Averages
+		lineageTag: 8aa37371-fd70-5f3b-9675-fb7c5ecad0ce
+
+	/// Mean paired patient change (post minus pre). Uses readings before the first selected therapy and from day 90 onward.
+	measure 'Systolic BP Change After Therapy (90+ Days)' =
+			AVERAGEX(
+			    DISTINCT(Dim_Patients[patient_id]),
+			    VAR TherapyStartInPeriod =
+			        CALCULATE(MIN(Fact_Medications[therapy_start_date]))
+			    VAR FirstTherapyStart =
+			        CALCULATE(MIN(Fact_Medications[therapy_start_date]), REMOVEFILTERS(Dim_Date))
+			    RETURN
+			        IF(
+			            NOT ISBLANK(FirstTherapyStart) && FirstTherapyStart = TherapyStartInPeriod,
+			            VAR BeforeTherapy =
+			                CALCULATE(
+			                    CALCULATE(
+			                        AVERAGE(Fact_Vitals[systolic_bp]),
+			                        KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date])),
+			                        KEEPFILTERS(Fact_Vitals[visit_date] < FirstTherapyStart)
+			                    ),
+			                    REMOVEFILTERS(Dim_Date)
+			                )
+			            VAR AfterTherapy =
+			                CALCULATE(
+			                    CALCULATE(
+			                        AVERAGE(Fact_Vitals[systolic_bp]),
+			                        KEEPFILTERS(Fact_Vitals[visit_date] >= FirstTherapyStart + 90)
+			                    ),
+			                    REMOVEFILTERS(Dim_Date)
+			                )
+			            RETURN
+			                IF(
+			                    NOT ISBLANK(BeforeTherapy) && NOT ISBLANK(AfterTherapy),
+			                    AfterTherapy - BeforeTherapy
+			                )
+			        )
+			)
+		formatString: +0.00;-0.00;0.00
+		displayFolder: Treatment Follow-up
+		lineageTag: 789aff2d-52f6-5543-9476-9704373f3105
+
+	/// Mean paired patient change (post minus pre). Uses readings before the first selected therapy and from day 90 onward.
+	measure 'BMI Change After Therapy (90+ Days)' =
+			AVERAGEX(
+			    DISTINCT(Dim_Patients[patient_id]),
+			    VAR TherapyStartInPeriod =
+			        CALCULATE(MIN(Fact_Medications[therapy_start_date]))
+			    VAR FirstTherapyStart =
+			        CALCULATE(MIN(Fact_Medications[therapy_start_date]), REMOVEFILTERS(Dim_Date))
+			    RETURN
+			        IF(
+			            NOT ISBLANK(FirstTherapyStart) && FirstTherapyStart = TherapyStartInPeriod,
+			            VAR BeforeTherapy =
+			                CALCULATE(
+			                    CALCULATE(
+			                        AVERAGE(Fact_Vitals[bmi]),
+			                        KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date])),
+			                        KEEPFILTERS(Fact_Vitals[visit_date] < FirstTherapyStart)
+			                    ),
+			                    REMOVEFILTERS(Dim_Date)
+			                )
+			            VAR AfterTherapy =
+			                CALCULATE(
+			                    CALCULATE(
+			                        AVERAGE(Fact_Vitals[bmi]),
+			                        KEEPFILTERS(Fact_Vitals[visit_date] >= FirstTherapyStart + 90)
+			                    ),
+			                    REMOVEFILTERS(Dim_Date)
+			                )
+			            RETURN
+			                IF(
+			                    NOT ISBLANK(BeforeTherapy) && NOT ISBLANK(AfterTherapy),
+			                    AfterTherapy - BeforeTherapy
+			                )
+			        )
+			)
+		formatString: +0.00;-0.00;0.00
+		displayFolder: Treatment Follow-up
+		lineageTag: 44e1bd93-1d39-5fd5-9578-7b6625e5abe8
+
+	/// Mean paired patient change (post minus pre). Uses readings before the first selected therapy and from day 90 onward.
+	measure 'Creatinine Change After Therapy (90+ Days)' =
+			AVERAGEX(
+			    DISTINCT(Dim_Patients[patient_id]),
+			    VAR TherapyStartInPeriod =
+			        CALCULATE(MIN(Fact_Medications[therapy_start_date]))
+			    VAR FirstTherapyStart =
+			        CALCULATE(MIN(Fact_Medications[therapy_start_date]), REMOVEFILTERS(Dim_Date))
+			    RETURN
+			        IF(
+			            NOT ISBLANK(FirstTherapyStart) && FirstTherapyStart = TherapyStartInPeriod,
+			            VAR BeforeTherapy =
+			                CALCULATE(
+			                    CALCULATE(
+			                        AVERAGE(Fact_Vitals[creatinine]),
+			                        KEEPFILTERS(NOT ISBLANK(Fact_Vitals[visit_date])),
+			                        KEEPFILTERS(Fact_Vitals[visit_date] < FirstTherapyStart)
+			                    ),
+			                    REMOVEFILTERS(Dim_Date)
+			                )
+			            VAR AfterTherapy =
+			                CALCULATE(
+			                    CALCULATE(
+			                        AVERAGE(Fact_Vitals[creatinine]),
+			                        KEEPFILTERS(Fact_Vitals[visit_date] >= FirstTherapyStart + 90)
+			                    ),
+			                    REMOVEFILTERS(Dim_Date)
+			                )
+			            RETURN
+			                IF(
+			                    NOT ISBLANK(BeforeTherapy) && NOT ISBLANK(AfterTherapy),
+			                    AfterTherapy - BeforeTherapy
+			                )
+			        )
+			)
+		formatString: +0.00;-0.00;0.00
+		displayFolder: Treatment Follow-up
+		lineageTag: 73477581-62fc-5da6-ab81-79d68157fa64
+
+	measure 'Dynamic Biomarker Target' = SWITCH(SELECTEDVALUE('Biomarker Selector'[Biomarker Selector Order], 0), 0, 130, 1, 80, 2, 30, 3, 100, 4, 1.3)
+		displayFolder: Population Control
+		lineageTag: b07279b6-0836-4c7e-acd5-8aeb93f0a5a5
+
+	measure 'Selected Biomarker Average' = SWITCH(SELECTEDVALUE('Biomarker Selector'[Biomarker Selector Order], 0), 0, [Average Systolic BP Reading], 1, [Average Diastolic BP Reading], 2, [Average BMI Reading], 3, [Average Heart Rate Reading], 4, [Average Creatinine Reading])
+		displayFolder: Population Control
+		lineageTag: ae0b7f22-c3ab-45ac-bad4-c903f2b2bbf0
+
+	measure 'Biomarker Chart Subtitle' = VAR u = SWITCH(SELECTEDVALUE('Biomarker Selector'[Biomarker Selector Order], 0), 0, "mmHg", 1, "mmHg", 2, "kg/m²", 3, "bpm", 4, "mg/dL") RETURN "Cohort Avg: " & FORMAT([Selected Biomarker Average],"0.00") & " " & u & " • Dashed line marks clinical target < " & FORMAT([Dynamic Biomarker Target],"0.#") & " " & u
+		displayFolder: Population Control
+		lineageTag: 90f9deeb-1334-42a0-bd29-0cbcfdd6eeac
+
+	measure 'BMI Eligible Count' = COALESCE(COUNTROWS(FILTER(VALUES(Dim_Patients[patient_id]), NOT ISBLANK([Latest Patient BMI]))),0)
+		displayFolder: Population Control
+		lineageTag: 7fbdb48b-fe06-4af8-9a1a-0b2c18c5d316
+
+	measure 'HTN Eligible Count' = COALESCE(COUNTROWS(FILTER(CALCULATETABLE(VALUES(Dim_Patients[patient_id]), KEEPFILTERS(Dim_Patients[has_hypertension]=1)), NOT ISBLANK([Latest Patient Systolic BP]) && NOT ISBLANK([Latest Patient Diastolic BP]))),0)
+		displayFolder: Population Control
+		lineageTag: 81cfd8ea-e237-43a2-a5b2-fa9c635b948b
+
+	measure 'Cohort Detail' = FORMAT([BMI Eligible Count], "#,##0") & " w/ BMI • " & FORMAT(CALCULATE([Total Cohort Patients], KEEPFILTERS(Dim_Patients[has_hypertension]=1))+0, "#,##0") & " Hypertensive"
+		displayFolder: Population Control
+		lineageTag: c377f3b8-9c92-4098-9963-880b3e758974
+
+	measure 'Control Detail' = FORMAT(COALESCE([Hypertension Control Rate (%)]*[HTN Eligible Count],0), "#,##0") & " / " & FORMAT([HTN Eligible Count], "#,##0") & " controlled (<130/80 mmHg)"
+		displayFolder: Population Control
+		lineageTag: 9fd61e3d-977d-4625-8ca5-067c969086ab
+
+	measure 'Obesity Detail' = FORMAT(COALESCE([Obesity Prevalence (%)]*[BMI Eligible Count],0), "#,##0") & " / " & FORMAT([BMI Eligible Count], "#,##0") & " patients (BMI ≥ 30)"
+		displayFolder: Population Control
+		lineageTag: b52b0b4e-66d8-430c-a3e4-453b15087729
+
+	measure 'Medication Detail' = FORMAT(COALESCE([Polypharmacy Rate (%)]*[Total Cohort Patients],0), "#,##0") & " patients on 5+ active meds"
+		displayFolder: Population Control
+		lineageTag: d530a42c-999d-4622-9976-c9814a85e2aa
+
+	measure 'Mortality Detail' = VAR d = ROUND([Cohort Mortality Rate (%)]*[Total Cohort Patients],0) RETURN FORMAT(d+0, "#,##0") & " deceased • " & FORMAT([Total Cohort Patients]-d, "#,##0") & " active"
+		displayFolder: Population Control
+		lineageTag: 99224212-4b5c-42e1-a23d-a311ea58e3d2
+
+	measure 'Control Value Color' = IF(ISBLANK([Hypertension Control Rate (%)]),"#94A3B8",IF([Hypertension Control Rate (%)]>=0.5,"#0D9488","#E11D48"))
+		displayFolder: Population Control
+		lineageTag: 6b3aa058-57cc-47cd-8aed-b8f5705f4ee4
+
+	measure 'Percent of Age Cohort' = DIVIDE([Total Cohort Patients], CALCULATE([Total Cohort Patients], ALLSELECTED(Dim_Patients[polypharmacy_tier])))
+		formatString: 0.0%
+		displayFolder: Population Control
+		lineageTag: 57d684a6-d965-4066-8da1-b0d4a6402422
+
+	measure 'Patient Summary' = FORMAT([Total Cohort Patients], "#,##0") & " patients  •  BP " & FORMAT(AVERAGEX(VALUES(Dim_Patients[patient_id]),[Latest Patient Systolic BP]),"0") & "/" & FORMAT(AVERAGEX(VALUES(Dim_Patients[patient_id]),[Latest Patient Diastolic BP]),"0") & " mmHg  •  BMI " & FORMAT(AVERAGEX(VALUES(Dim_Patients[patient_id]),[Latest Patient BMI]),"0.0")
+		displayFolder: Population Control
+		lineageTag: 3658085f-aaf1-4cbd-93ee-3563a3668a30
+
+	measure 'Anatomy Preview' =
+			VAR s = AVERAGEX(VALUES(Dim_Patients[patient_id]),[Latest Patient Systolic BP])
+			VAR d = AVERAGEX(VALUES(Dim_Patients[patient_id]),[Latest Patient Diastolic BP])
+			VAR b = AVERAGEX(VALUES(Dim_Patients[patient_id]),[Latest Patient BMI])
+			VAR c = [Average Creatinine Reading]
+			VAR lung = AVERAGE(Dim_Patients[has_asthma_copd])
+			VAR heart = SWITCH(TRUE(),ISBLANK(s)||ISBLANK(d),"94A3B8",s>=130||d>=80,"E11D48","0D9488")
+			VAR lungs = SWITCH(TRUE(),ISBLANK(lung),"94A3B8",lung=1,"E11D48",lung>0,"D97706","0D9488")
+			VAR kidney = SWITCH(TRUE(),ISBLANK(c),"94A3B8",c>=1.3,"E11D48","0D9488")
+			VAR torso = SWITCH(TRUE(),ISBLANK(b),"94A3B8",b>=30,"E11D48",b>=25,"D97706","0D9488")
+			RETURN "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 110'><g fill='%23475569'><circle cx='35' cy='10' r='8'/><path d='M27 20Q17 20 16 29L8 57Q8 63 13 60L23 37L23 60L21 104Q23 110 28 105L35 68L42 105Q47 110 49 104L47 60L47 37L57 60Q62 63 62 57L54 29Q53 20 43 20Z'/></g><ellipse cx='35' cy='51' rx='9' ry='12' fill='%23" & torso & "'/><g fill='%23" & lungs & "'><ellipse cx='29' cy='34' rx='5' ry='8'/><ellipse cx='41' cy='34' rx='5' ry='8'/></g><path d='M34 35Q35 31 38 34Q42 31 42 36L38 41Z' fill='%23" & heart & "'/><g fill='%23" & kidney & "'><ellipse cx='29' cy='49' rx='3' ry='5'/><ellipse cx='41' cy='49' rx='3' ry='5'/></g></svg>"
+		displayFolder: Population Control
+		lineageTag: f25b503f-1bb2-47ad-96c1-45d28dc15587
+		dataCategory: ImageUrl
+
+	measure 'Systolic BP Paired Patients' = COALESCE(COUNTX(VALUES(Dim_Patients[patient_id]), [Systolic BP Change After Therapy (90+ Days)]),0)
+		formatString: #,##0
+		displayFolder: Biomarker Trajectories
+		lineageTag: 9567371b-9c19-4abe-ab28-721c997b8ca7
+
+	measure 'Systolic BP Shift Display' = IF(ISBLANK([Systolic BP Change After Therapy (90+ Days)]), "—", FORMAT([Systolic BP Change After Therapy (90+ Days)], "+0.00;-0.00;0.00") & " mmHg")
+		displayFolder: Biomarker Trajectories
+		lineageTag: 57223176-15b0-4b45-84dc-dc2dc8377db1
+
+	measure 'Systolic BP Shift Detail' = "n = " & FORMAT([Systolic BP Paired Patients], "#,##0") & " • Near-Flat Stabilization"
+		displayFolder: Biomarker Trajectories
+		lineageTag: a9569e7c-cb86-4435-8cb1-104af2537077
+
+	measure 'BMI Paired Patients' = COALESCE(COUNTX(VALUES(Dim_Patients[patient_id]), [BMI Change After Therapy (90+ Days)]),0)
+		formatString: #,##0
+		displayFolder: Biomarker Trajectories
+		lineageTag: 64b13328-5740-4ef4-8759-7637658e7e5b
+
+	measure 'BMI Shift Display' = IF(ISBLANK([BMI Change After Therapy (90+ Days)]), "—", FORMAT([BMI Change After Therapy (90+ Days)], "+0.00;-0.00;0.00") & " kg/m²")
+		displayFolder: Biomarker Trajectories
+		lineageTag: 00b62266-7017-4b8a-8b53-5eacc2ba60ad
+
+	measure 'BMI Shift Detail' = "n = " & FORMAT([BMI Paired Patients], "#,##0") & " • Gradual Drift"
+		displayFolder: Biomarker Trajectories
+		lineageTag: 95876465-da47-40e5-8341-0b9a3aa79d86
+
+	measure 'Creatinine Paired Patients' = COALESCE(COUNTX(VALUES(Dim_Patients[patient_id]), [Creatinine Change After Therapy (90+ Days)]),0)
+		formatString: #,##0
+		displayFolder: Biomarker Trajectories
+		lineageTag: cd76d566-567d-4d50-a8b1-7a69fac11d64
+
+	measure 'Creatinine Shift Display' = IF(ISBLANK([Creatinine Change After Therapy (90+ Days)]), "—", FORMAT([Creatinine Change After Therapy (90+ Days)], "+0.00;-0.00;0.00") & " mg/dL")
+		displayFolder: Biomarker Trajectories
+		lineageTag: 5cceb0a6-16b9-456a-92f3-b6660180ffa0
+
+	measure 'Creatinine Shift Detail' = "n = " & FORMAT([Creatinine Paired Patients], "#,##0") & " • Renal Watch"
+		displayFolder: Biomarker Trajectories
+		lineageTag: bfc59577-9dd3-4c2e-917f-120ed8cf1831
+
+	measure 'Selected Biomarker 90+ Day Therapy Change' = SWITCH(SELECTEDVALUE('Biomarker Selector'[Biomarker Selector Order],0),2,[BMI Change After Therapy (90+ Days)],4,[Creatinine Change After Therapy (90+ Days)],[Systolic BP Change After Therapy (90+ Days)])
+		formatString: +#,0.00;-#,0.00;0.00
+		displayFolder: Biomarker Trajectories
+		lineageTag: 03733339-b471-44ec-abab-2a771d5a5d20
+
+	measure 'Selected Therapy Paired Patients' = SWITCH(SELECTEDVALUE('Biomarker Selector'[Biomarker Selector Order],0),2,[BMI Paired Patients],4,[Creatinine Paired Patients],[Systolic BP Paired Patients])
+		formatString: #,##0
+		displayFolder: Biomarker Trajectories
+		lineageTag: ba6c449d-c316-4d18-8d20-b2e618309d66
+
+	measure 'Therapy Change Bar Color' = VAR v = [Selected Biomarker 90+ Day Therapy Change] RETURN SWITCH(TRUE(),ISBLANK(v),"#94A3B8",v<0,"#0D9488",v<=1.5,"#D97706","#E11D48")
+		displayFolder: Biomarker Trajectories
+		lineageTag: 2e025a53-11e7-4d37-998d-4e4a4634e019
+
+	measure 'Therapy Shift Axis Label' = SWITCH(SELECTEDVALUE('Biomarker Selector'[Biomarker Selector Order],0), 1,"Systolic BP shift (mmHg) • Diastolic BP fallback", 3,"Systolic BP shift (mmHg) • Heart Rate fallback", 2,"BMI shift (kg/m²)", 4,"Creatinine shift (mg/dL)", "Systolic BP shift (mmHg)")
+		displayFolder: Biomarker Trajectories
+		lineageTag: ef42b4c8-4821-4f76-a51f-7d2817702402
+
+	measure 'Distinct Patients on Therapy' = DISTINCTCOUNT(Fact_Medications[patient_id])
+		formatString: #,##0
+		displayFolder: Biomarker Trajectories
+		lineageTag: df4c21ac-1196-452b-b4c5-d36459412159
+
+	measure 'Average Dispenses' = AVERAGE(Fact_Medications[total_dispenses])
+		formatString: 0.0
+		displayFolder: Biomarker Trajectories
+		lineageTag: 69cf5e1b-1e58-4aa1-a867-2b8459363081
+
+	measure 'Patient Coverage and Refill Label' = IF(NOT ISBLANK([Distinct Patients on Therapy]),FORMAT([Distinct Patients on Therapy],"#,##0") & " patients • avg " & FORMAT([Average Dispenses],"0.0") & " dispenses")
+		displayFolder: Biomarker Trajectories
+		lineageTag: 3554317b-8c75-4bd4-af3e-fc59d6d61d82
+
+	measure 'Active Regimen Rate (%)' = DIVIDE(CALCULATE(COUNTROWS(Fact_Medications), KEEPFILTERS(ISBLANK(Fact_Medications[therapy_stop_date])))+0, COUNTROWS(Fact_Medications))
+		formatString: 0.0%
+		displayFolder: Biomarker Trajectories
+		lineageTag: dc25fef6-64ae-4988-9c99-dda370ff67b0
+
+	measure 'Total Cumulative Dispenses' = SUM(Fact_Medications[total_dispenses])
+		formatString: #,##0
+		displayFolder: Biomarker Trajectories
+		lineageTag: 7461678e-0bcb-4834-a36f-5180b7de314e
+
+	measure 'Top Prescribed Drug' = VAR ranked = ADDCOLUMNS(VALUES(Fact_Medications[medication_description]), "@Rows",CALCULATE(COUNTROWS(Fact_Medications))) RETURN CONCATENATEX(TOPN(1,ranked,[@Rows],DESC,Fact_Medications[medication_description],ASC),Fact_Medications[medication_description],"")
+		displayFolder: Biomarker Trajectories
+		lineageTag: e7594509-eeaf-41df-8332-da0de4dffc0a
+
+	measure 'Sample Size n' = COUNTROWS(Fact_Vitals)
+		formatString: #,##0
+		displayFolder: Biomarker Trajectories
+		lineageTag: 42da0ffc-d141-4561-ac0a-321fb7f6c47e
+
+	measure 'Patient Chart Button' = IF(HASONEVALUE(Dim_Patients[patient_id]), "Open Patient Chart →", "Select 1 Patient")
+		displayFolder: Patient Chart
+		lineageTag: 060bd8c2-3b17-486a-851f-2c0a926310be
+
+	measure 'Chart Patient ID' = IF(HASONEVALUE(Dim_Patients[patient_id]),SELECTEDVALUE(Dim_Patients[patient_id]),"Select a single patient via Drill-Through or the selector above")
+		displayFolder: Patient Chart
+		lineageTag: 336a9f1e-d448-4818-9398-332939dada7b
+
+	measure 'Patient Age and Cohort' = IF(HASONEVALUE(Dim_Patients[patient_id]), SELECTEDVALUE(Dim_Patients[age]) & " yrs • " & SELECTEDVALUE(Dim_Patients[age_cohort]))
+		displayFolder: Patient Chart
+		lineageTag: b794d9c9-a1d7-4be8-a2f9-f2841cc7d7f3
+
+	measure 'Patient Demographics' = IF(HASONEVALUE(Dim_Patients[patient_id]), SELECTEDVALUE(Dim_Patients[GENDER]) & " / " & SELECTEDVALUE(Dim_Patients[RACE]) & " / " & SELECTEDVALUE(Dim_Patients[ETHNICITY]))
+		displayFolder: Patient Chart
+		lineageTag: 58fe72b8-c7a1-42cf-85e9-32327edca661
+
+	measure 'Patient Location' = IF(HASONEVALUE(Dim_Patients[patient_id]), SELECTEDVALUE(Dim_Patients[CITY]) & "  " & SELECTEDVALUE(Dim_Patients[ZIP]))
+		displayFolder: Patient Chart
+		lineageTag: 680551e3-61a1-4739-bc30-76ba45af9fa3
+
+	measure 'Patient Vital Status' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(ISBLANK(SELECTEDVALUE(Dim_Patients[DEATHDATE])),"VITAL STATUS: ALIVE","DECEASED (" & FORMAT(SELECTEDVALUE(Dim_Patients[DEATHDATE]),"dd MMM yyyy") & ")"))
+		displayFolder: Patient Chart
+		lineageTag: 6af473bf-e0dc-4063-bedc-fb482c133946
+
+	measure 'Patient Vital Status Color' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(ISBLANK(SELECTEDVALUE(Dim_Patients[DEATHDATE])),"#0D9488","#475569"))
+		displayFolder: Patient Chart
+		lineageTag: 5a0bfa16-e098-4a72-aa1e-a9c4e0bc3b3b
+
+	measure 'Patient Vital Status Fill' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(ISBLANK(SELECTEDVALUE(Dim_Patients[DEATHDATE])),"#F0FDFA","#F1F5F9"))
+		displayFolder: Patient Chart
+		lineageTag: 15739907-6da8-4acb-a1bc-493de2d241bd
+
+	measure 'Patient Medication Tier' = IF(HASONEVALUE(Dim_Patients[patient_id]), SWITCH(TRUE(),SELECTEDVALUE(Dim_Patients[active_med_count])>=5,"5+ POLYPHARMACY",SELECTEDVALUE(Dim_Patients[active_med_count])>0,"STANDARD (1–4 MEDS)","NO ACTIVE MEDS"))
+		displayFolder: Patient Chart
+		lineageTag: 69f5ffed-6bfa-438f-a2dd-b2cdf10cd8e4
+
+	measure 'Patient Medication Tier Color' = IF(HASONEVALUE(Dim_Patients[patient_id]), SWITCH(TRUE(),SELECTEDVALUE(Dim_Patients[active_med_count])>=5,"#E11D48",SELECTEDVALUE(Dim_Patients[active_med_count])>0,"#D97706","#64748B"))
+		displayFolder: Patient Chart
+		lineageTag: 9df2803d-0658-41fc-8687-54bc7ab34df9
+
+	measure 'Patient Medication Tier Fill' = IF(HASONEVALUE(Dim_Patients[patient_id]), SWITCH(TRUE(),SELECTEDVALUE(Dim_Patients[active_med_count])>=5,"#FFF1F2",SELECTEDVALUE(Dim_Patients[active_med_count])>0,"#FFFBEB","#F1F5F9"))
+		displayFolder: Patient Chart
+		lineageTag: 5852b278-22f6-4de1-aaca-d4c17ecc7814
+
+	measure 'Systolic BP Chart Color' = IF(HASONEVALUE(Dim_Patients[patient_id]), VAR v=[Latest Patient Systolic BP] RETURN SWITCH(TRUE(),ISBLANK(v),"#94A3B8",v<130,"#0D9488",v<140,"#D97706","#E11D48"))
+		displayFolder: Patient Chart
+		lineageTag: 9c03fd92-0148-426e-8b2a-dc7e82e2b8ad
+
+	measure 'Systolic BP Chart Value' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(ISBLANK([Latest Patient Systolic BP]),"—",FORMAT([Latest Patient Systolic BP],"0") & " mmHg"))
+		displayFolder: Patient Chart
+		lineageTag: 5579464a-7b5f-4112-bad9-bdfbb5a09fe1
+
+	measure 'Diastolic BP Chart Color' = IF(HASONEVALUE(Dim_Patients[patient_id]), VAR v=[Latest Patient Diastolic BP] RETURN SWITCH(TRUE(),ISBLANK(v),"#94A3B8",v<80,"#0D9488",v<90,"#D97706","#E11D48"))
+		displayFolder: Patient Chart
+		lineageTag: f84e45af-f4ce-422b-b695-703c828bdc12
+
+	measure 'Diastolic BP Chart Value' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(ISBLANK([Latest Patient Diastolic BP]),"—",FORMAT([Latest Patient Diastolic BP],"0") & " mmHg"))
+		displayFolder: Patient Chart
+		lineageTag: c41221c4-9f52-4102-84fd-bedcf91e7db1
+
+	measure 'BMI Chart Color' = IF(HASONEVALUE(Dim_Patients[patient_id]), VAR v=[Latest Patient BMI] RETURN SWITCH(TRUE(),ISBLANK(v),"#94A3B8",v<25,"#0D9488",v<30,"#D97706","#E11D48"))
+		displayFolder: Patient Chart
+		lineageTag: 887624c3-8ae0-40cf-8c96-4569b6c74502
+
+	measure 'BMI Chart Value' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(ISBLANK([Latest Patient BMI]),"—",FORMAT([Latest Patient BMI],"0.0") & " kg/m²"))
+		displayFolder: Patient Chart
+		lineageTag: 57cb2c88-ec50-4150-83d7-470315d42c44
+
+	measure 'Chart Systolic BP' = IF(HASONEVALUE(Dim_Patients[patient_id]), [Average Systolic BP Reading])
+		displayFolder: Patient Chart
+		lineageTag: 5e69655a-06d1-4de6-af55-64c14d4e5b1b
+
+	measure 'Chart Diastolic BP' = IF(HASONEVALUE(Dim_Patients[patient_id]), [Average Diastolic BP Reading])
+		displayFolder: Patient Chart
+		lineageTag: 0db2e768-6b37-4ec1-b118-f817c152af25
+
+	measure 'Chart BMI' = IF(HASONEVALUE(Dim_Patients[patient_id]), [Average BMI Reading])
+		displayFolder: Patient Chart
+		lineageTag: bf4c4358-5a3b-4950-90cd-47bbcc0aff95
+
+	measure 'Chart Heart Rate' = IF(HASONEVALUE(Dim_Patients[patient_id]), [Average Heart Rate Reading])
+		displayFolder: Patient Chart
+		lineageTag: 5103f453-6e9f-40b8-9368-20bd272132dc
+
+	measure 'Chart Creatinine' = IF(HASONEVALUE(Dim_Patients[patient_id]), [Average Creatinine Reading])
+		displayFolder: Patient Chart
+		lineageTag: a7a17f00-c66d-4927-8915-90497305f7d8
+
+	measure 'Chart Visit Sequence' = IF(HASONEVALUE(Dim_Patients[patient_id]), MAX(Fact_Vitals[visit_sequence_num]))
+		displayFolder: Patient Chart
+		lineageTag: 9d111476-8acd-485a-b0f8-c6acbc1240d2
+
+	measure 'Chart Latest Heart Rate' = IF(HASONEVALUE(Dim_Patients[patient_id]), MAXX(TOPN(1,FILTER(Fact_Vitals,NOT ISBLANK(Fact_Vitals[heart_rate]) && NOT ISBLANK(Fact_Vitals[visit_date])),Fact_Vitals[visit_date],DESC,Fact_Vitals[visit_sequence_num],DESC,Fact_Vitals[encounter_id],DESC),Fact_Vitals[heart_rate]))
+		displayFolder: Patient Chart
+		lineageTag: 88774c47-2a29-4818-9d92-53e30e74095a
+
+	measure 'Heart Rate Result' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(ISBLANK([Chart Latest Heart Rate]),"—",FORMAT([Chart Latest Heart Rate],"0") & " bpm"))
+		displayFolder: Patient Chart
+		lineageTag: 6ca6a274-0bcf-47bd-b927-33581699a479
+
+	measure 'Chart Latest Creatinine' = IF(HASONEVALUE(Dim_Patients[patient_id]), MAXX(TOPN(1,FILTER(Fact_Vitals,NOT ISBLANK(Fact_Vitals[creatinine]) && NOT ISBLANK(Fact_Vitals[visit_date])),Fact_Vitals[visit_date],DESC,Fact_Vitals[visit_sequence_num],DESC,Fact_Vitals[encounter_id],DESC),Fact_Vitals[creatinine]))
+		displayFolder: Patient Chart
+		lineageTag: a451f982-e6d1-46a3-8a7b-1ab6a003939b
+
+	measure 'Creatinine Result' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(ISBLANK([Chart Latest Creatinine]),"No Lab",FORMAT([Chart Latest Creatinine],"0.00") & " mg/dL"))
+		displayFolder: Patient Chart
+		lineageTag: c3a93693-7a03-475b-a658-8d61562a22be
+
+	measure 'Patient Visits' = IF(HASONEVALUE(Dim_Patients[patient_id]), COUNTROWS(Fact_Vitals)+0)
+		displayFolder: Patient Chart
+		lineageTag: 1dc0dd1a-811a-4f0f-809c-97eb81edb159
+
+	measure 'Hypertension border' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_hypertension])=1,"#E11D48","#E2E8F0"))
+		displayFolder: Patient Chart
+		lineageTag: 1783b730-34b8-415b-bfdc-bfcf6124f50d
+
+	measure 'Hypertension background' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_hypertension])=1,"#FFF1F2","#F8FAFC"))
+		displayFolder: Patient Chart
+		lineageTag: 89bfd535-447b-4b8c-bbb7-0adfe384e260
+
+	measure 'Hypertension Chip' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_hypertension])=1,"● ","○ ") & "Hypertension")
+		displayFolder: Patient Chart
+		lineageTag: c69ce36c-d4e4-4bab-bb24-1805437573fa
+
+	measure 'Hypertension Ink' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_hypertension])=1,"#E11D48","#94A3B8"))
+		displayFolder: Patient Chart
+		lineageTag: 31c19a03-2f8b-49c0-b602-a149e8094117
+
+	measure 'Obesity border' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_obesity])=1,"#E11D48","#E2E8F0"))
+		displayFolder: Patient Chart
+		lineageTag: 0f74a701-077e-4b5f-994d-eff8b9b48acb
+
+	measure 'Obesity background' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_obesity])=1,"#FFF1F2","#F8FAFC"))
+		displayFolder: Patient Chart
+		lineageTag: bba23903-aa11-4ca4-83e4-788216e67f9a
+
+	measure 'Obesity Chip' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_obesity])=1,"● ","○ ") & "Obesity")
+		displayFolder: Patient Chart
+		lineageTag: 4ebd4b7e-e061-4147-92a3-85d0a44fbdc8
+
+	measure 'Obesity Ink' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_obesity])=1,"#E11D48","#94A3B8"))
+		displayFolder: Patient Chart
+		lineageTag: 45b37cac-ec21-4700-b573-89d1b0c43250
+
+	measure 'Diabetes border' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_diabetes])=1,"#E11D48","#E2E8F0"))
+		displayFolder: Patient Chart
+		lineageTag: f214a13e-b56d-4b86-9afc-3c05b07438e0
+
+	measure 'Diabetes background' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_diabetes])=1,"#FFF1F2","#F8FAFC"))
+		displayFolder: Patient Chart
+		lineageTag: 233039b8-28a3-4d9a-8e3d-756a678c9bbd
+
+	measure 'Diabetes Chip' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_diabetes])=1,"● ","○ ") & "Diabetes")
+		displayFolder: Patient Chart
+		lineageTag: 6e592ee6-3e7f-43a7-8889-0f75bda113e6
+
+	measure 'Diabetes Ink' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_diabetes])=1,"#E11D48","#94A3B8"))
+		displayFolder: Patient Chart
+		lineageTag: 34c659df-8e1b-4904-b816-7b8b1115c08f
+
+	measure 'Hyperlipidemia border' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_hyperlipidemia])=1,"#E11D48","#E2E8F0"))
+		displayFolder: Patient Chart
+		lineageTag: b6054251-47dd-4571-ba20-4c13e450cad9
+
+	measure 'Hyperlipidemia background' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_hyperlipidemia])=1,"#FFF1F2","#F8FAFC"))
+		displayFolder: Patient Chart
+		lineageTag: d1b3f3b8-f087-4fe2-90d2-3a085c8d9796
+
+	measure 'Hyperlipidemia Chip' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_hyperlipidemia])=1,"● ","○ ") & "Hyperlipidemia")
+		displayFolder: Patient Chart
+		lineageTag: a92b56c2-eae9-45bd-8c09-6cfd115744b4
+
+	measure 'Hyperlipidemia Ink' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_hyperlipidemia])=1,"#E11D48","#94A3B8"))
+		displayFolder: Patient Chart
+		lineageTag: b8265f7a-5d67-4472-aee6-379d21932169
+
+	measure 'Asthma / COPD border' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_asthma_copd])=1,"#E11D48","#E2E8F0"))
+		displayFolder: Patient Chart
+		lineageTag: 4be189c6-8201-444c-a285-ad1101576d71
+
+	measure 'Asthma / COPD background' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_asthma_copd])=1,"#FFF1F2","#F8FAFC"))
+		displayFolder: Patient Chart
+		lineageTag: f6010ee0-7e7c-4cd7-977c-b1a7c8c09ef9
+
+	measure 'Asthma / COPD Chip' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_asthma_copd])=1,"● ","○ ") & "Asthma / COPD")
+		displayFolder: Patient Chart
+		lineageTag: 94f0db62-0738-46ef-a69d-677f963ae1d1
+
+	measure 'Asthma / COPD Ink' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_asthma_copd])=1,"#E11D48","#94A3B8"))
+		displayFolder: Patient Chart
+		lineageTag: d638eab2-5e41-404c-8987-48340afd569f
+
+	measure 'Oncology border' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_oncology])=1,"#E11D48","#E2E8F0"))
+		displayFolder: Patient Chart
+		lineageTag: 7415f13e-e4ef-4722-b038-58468b838e74
+
+	measure 'Oncology background' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_oncology])=1,"#FFF1F2","#F8FAFC"))
+		displayFolder: Patient Chart
+		lineageTag: 1c532b4a-6151-446e-af0f-848b7d39c21c
+
+	measure 'Oncology Chip' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_oncology])=1,"● ","○ ") & "Oncology")
+		displayFolder: Patient Chart
+		lineageTag: fd21a5d2-9b0f-4c70-b878-ce4aaf07d0da
+
+	measure 'Oncology Ink' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Dim_Patients[has_oncology])=1,"#E11D48","#94A3B8"))
+		displayFolder: Patient Chart
+		lineageTag: 1156d802-bd22-4b7a-bee0-39abd55318a7
+
+	measure 'Patient Anatomy SVG' = IF(HASONEVALUE(Dim_Patients[patient_id]), VAR sysBP=[Latest Patient Systolic BP] VAR diaBP=[Latest Patient Diastolic BP] VAR bmiVal=[Latest Patient BMI] VAR cr=[Chart Latest Creatinine] VAR zoneH=SWITCH(TRUE(),sysBP>=130 || diaBP>=80,"E11D48",ISBLANK(sysBP)||ISBLANK(diaBP),"CBD5E1",SELECTEDVALUE(Dim_Patients[has_hypertension])=1,"D97706","0D9488") VAR zoneL=IF(SELECTEDVALUE(Dim_Patients[has_asthma_copd])=1 || CALCULATE(COUNTROWS(Fact_Medications),Fact_Medications[therapeutic_class]="Respiratory Inhalers",ISBLANK(Fact_Medications[therapy_stop_date]))>0,"D97706","0D9488") VAR zoneK=SWITCH(TRUE(),ISBLANK(cr),"CBD5E1",cr>1.3,"E11D48",cr>=1.1,"D97706","0D9488") VAR zoneB=SWITCH(TRUE(),ISBLANK(bmiVal),"CBD5E1",bmiVal>=30,"E11D48",bmiVal>=25,"D97706","0D9488") RETURN SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 190'><g fill='%23E2E8F0' stroke='%2394A3B8'><circle cx='120' cy='17' r='13'/><path d='M108 33Q86 31 82 48L68 95Q67 104 75 99L95 60L98 96L96 157Q98 167 105 159L120 109L135 159Q143 166 144 157L142 96L145 60L165 99Q173 104 172 95L158 48Q154 31 132 33Z'/></g><path d='M116 43Q104 43 100 63Q99 71 111 66Q117 61 116 43ZM124 43Q136 43 140 63Q141 71 129 66Q123 61 124 43Z' fill='%23@L'/><path d='M118 57Q119 51 125 55Q132 50 132 58Q130 64 124 68Q118 63 118 57Z' fill='%23@H'/><path d='M110 73Q101 69 103 81Q106 88 111 82Q107 80 110 73ZM130 73Q139 69 137 81Q134 88 129 82Q133 80 130 73Z' fill='%23@K'/><path d='M101 89Q120 96 139 89L138 95Q120 102 102 95Z' fill='%23@B'/><ellipse cx='125' cy='59' rx='12' ry='10' stroke='%23E11D48' fill='none' opacity='@Hring'/><ellipse cx='120' cy='78' rx='20' ry='10' stroke='%23E11D48' fill='none' opacity='@Kring'/><ellipse cx='120' cy='94' rx='22' ry='10' stroke='%23E11D48' fill='none' opacity='@Bring'/><circle cx='11' cy='179' r='4' fill='%230D9488'/><text x='19' y='183' font-family='Segoe UI' font-size='11'>Controlled</text><circle cx='101' cy='179' r='4' fill='%23D97706'/><text x='109' y='183' font-family='Segoe UI' font-size='11'>Watch</text><circle cx='174' cy='179' r='4' fill='%23E11D48'/><text x='182' y='183' font-family='Segoe UI' font-size='11'>Alert</text></svg>","@Hring",IF(zoneH="E11D48","0.35","0")),"@H",zoneH),"@L",zoneL),"@Kring",IF(zoneK="E11D48","0.35","0")),"@K",zoneK),"@Bring",IF(zoneB="E11D48","0.35","0")),"@B",zoneB), "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 190'><g text-anchor='middle' font-family='Segoe UI' font-size='12' fill='%2364748B'><text x='120' y='86'>Select a single patient via Drill-Through</text><text x='120' y='104'>or the selector above</text></g></svg>")
+		displayFolder: Patient Chart
+		lineageTag: 97cc307f-f4d2-4c07-a314-c73e6d898efc
+		dataCategory: ImageUrl
+
+	measure 'Individual Chart Enabled' = IF(HASONEVALUE(Dim_Patients[patient_id]),1,0)
+		displayFolder: Patient Chart
+		lineageTag: 1c7f305a-d51c-4243-b7a7-521013586189
+
+	measure 'Regimen fontColor' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Fact_Medications[Regimen Status])="● Active","#0D9488","#64748B"))
+		displayFolder: Patient Chart
+		lineageTag: b036ca0e-f835-4082-8329-0bdcbe226fa6
+
+	measure 'Regimen backColor' = IF(HASONEVALUE(Dim_Patients[patient_id]), IF(SELECTEDVALUE(Fact_Medications[Regimen Status])="● Active","#F0FDFA","#F1F5F9"))
+		displayFolder: Patient Chart
+		lineageTag: 440fd9ba-4796-4ba9-9b35-0c217805f42f
+
+	column Placeholder
+		dataType: string
+		isHidden
+		lineageTag: 2810770d-802d-42f5-af15-ee86ec537202
+		summarizeBy: none
+		sourceColumn: Placeholder
+
+	partition _Measures = m
+		mode: import
+		source = #table(type table [Placeholder = text], {{""}})
+
+	annotation PBI_ResultType = Table
+

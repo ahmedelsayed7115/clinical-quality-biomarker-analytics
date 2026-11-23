@@ -1,0 +1,98 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 60,
+            "y": 40
+          },
+          "nodeIndex": "Dim_Patients",
+          "nodeLineageTag": "ab2e606e-eb22-5f2c-b2a1-378a72151345",
+          "size": {
+            "height": 260,
+            "width": 245
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 410,
+            "y": 40
+          },
+          "nodeIndex": "Dim_Date",
+          "nodeLineageTag": "b8a5b298-352a-5877-838b-112c4d21e783",
+          "size": {
+            "height": 210,
+            "width": 245
+          },
+          "zIndex": 1
+        },
+        {
+          "location": {
+            "x": 60,
+            "y": 375
+          },
+          "nodeIndex": "Fact_Vitals",
+          "nodeLineageTag": "2a1a4155-91fb-5cb2-a6f2-f9413a34729c",
+          "size": {
+            "height": 260,
+            "width": 245
+          },
+          "zIndex": 2
+        },
+        {
+          "location": {
+            "x": 410,
+            "y": 375
+          },
+          "nodeIndex": "Fact_Medications",
+          "nodeLineageTag": "0d308211-a446-5abd-bbd2-dee88eab9ac6",
+          "size": {
+            "height": 260,
+            "width": 245
+          },
+          "zIndex": 3
+        },
+        {
+          "location": {
+            "x": 755,
+            "y": 40
+          },
+          "nodeIndex": "_Measures",
+          "nodeLineageTag": "c2769718-9cc6-547d-b0b6-f1e10ee81a1a",
+          "size": {
+            "height": 260,
+            "width": 245
+          },
+          "zIndex": 4
+        },
+        {
+          "location": {
+            "x": 755,
+            "y": 375
+          },
+          "nodeIndex": "Biomarker Selector",
+          "nodeLineageTag": "796df253-6e94-5da4-bc0f-c32386842308",
+          "size": {
+            "height": 133,
+            "width": 245
+          },
+          "zIndex": 5
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 85,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ]
+}

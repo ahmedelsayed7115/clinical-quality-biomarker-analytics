@@ -1,0 +1,46 @@
+table 'Biomarker Selector'
+	lineageTag: 796df253-6e94-5da4-bc0f-c32386842308
+
+	column 'Biomarker Selector'
+		dataType: string
+		lineageTag: ee7240b4-56e7-427d-a74d-0e586277c215
+		summarizeBy: none
+		sourceColumn: [Value1]
+		sortByColumn: 'Biomarker Selector Order'
+
+		relatedColumnDetails
+			groupByColumn: 'Biomarker Selector Fields'
+
+	column 'Biomarker Selector Fields'
+		dataType: string
+		isHidden
+		lineageTag: e135f470-2dd6-45c3-a103-00f99172c177
+		summarizeBy: none
+		sourceColumn: [Value2]
+		sortByColumn: 'Biomarker Selector Order'
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 3,
+				  "kind": 2
+				}
+
+	column 'Biomarker Selector Order'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 23fccff1-ec43-43a8-be22-ce51917183f0
+		summarizeBy: sum
+		sourceColumn: [Value3]
+
+	partition 'Biomarker Selector' = calculated
+		mode: import
+		source =
+				{
+					("Systolic BP", NAMEOF('_Measures'[Average Systolic BP Reading]), 0),
+					("Diastolic BP", NAMEOF('_Measures'[Average Diastolic BP Reading]), 1),
+					("BMI", NAMEOF('_Measures'[Average BMI Reading]), 2),
+					("Heart Rate", NAMEOF('_Measures'[Average Heart Rate Reading]), 3),
+					("Creatinine", NAMEOF('_Measures'[Average Creatinine Reading]), 4)
+				}
+

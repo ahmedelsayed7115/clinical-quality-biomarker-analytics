@@ -1,0 +1,16 @@
+relationship f7e0bbab-f17a-5e43-ad7c-09e8d4849081
+	fromColumn: Fact_Vitals.patient_id
+	toColumn: Dim_Patients.patient_id
+
+relationship 20bf804d-fa23-5489-90ee-4f396c2b29f4
+	fromColumn: Fact_Medications.patient_id
+	toColumn: Dim_Patients.patient_id
+
+relationship f4b29f75-aa8c-5378-81c7-2f30f8dd1460
+	fromColumn: Fact_Vitals.visit_date
+	toColumn: Dim_Date.date
+
+relationship f9a98a4b-4181-578c-985c-3afbdd74a99d
+	fromColumn: Fact_Medications.therapy_start_date
+	toColumn: Dim_Date.date
+
